@@ -1,0 +1,6 @@
+*.exe
+*.exe~
+.env*
+*.log
+.git
+docker-agent
