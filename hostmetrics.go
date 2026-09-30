@@ -205,10 +205,36 @@ func readHostLoadAvg() (load1, load5, load15 float64, err error) {
 	return load1, load5, load15, nil
 }
 
-func readHostDisk() (totalBytes, usedBytes, availableBytes int64, err error) {
+// dockerDataPath is the host path whose filesystem Host Disk reports: the
+// one holding Docker's data root (images, volumes, build cache), read via
+// the /host/root bind mount. On a typical Linux server that is the same
+// disk as /; on Docker Desktop, / is a ~3 GB internal overlay while
+// /var/lib/docker sits on the real (~1 TB) data disk, so statting / alone
+// showed "516 KB of 3.3 GB". Resolved once from `docker info`.
+var (
+	dockerDataPathOnce sync.Once
+	dockerDataPath     = hostRootPath
+)
+
+func (d *dockerClient) resolveDockerDataPath(ctx context.Context) string {
+	dockerDataPathOnce.Do(func() {
+		info, err := d.cli.Info(ctx)
+		if err != nil || info.DockerRootDir == "" {
+			return
+		}
+		candidate := hostRootPath + info.DockerRootDir
+		var stat syscall.Statfs_t
+		if syscall.Statfs(candidate, &stat) == nil {
+			dockerDataPath = candidate
+		}
+	})
+	return dockerDataPath
+}
+
+func readHostDisk(path string) (totalBytes, usedBytes, availableBytes int64, err error) {
 	var stat syscall.Statfs_t
-	if err := syscall.Statfs(hostRootPath, &stat); err != nil {
-		return 0, 0, 0, fmt.Errorf("statfs %s: %w", hostRootPath, err)
+	if err := syscall.Statfs(path, &stat); err != nil {
+		return 0, 0, 0, fmt.Errorf("statfs %s: %w", path, err)
 	}
 	blockSize := uint64(stat.Bsize)
 	total := stat.Blocks * blockSize
@@ -240,7 +266,7 @@ func (d *dockerClient) HostSystemMetrics(ctx context.Context) (HostSystemMetrics
 	if err != nil {
 		return HostSystemMetricsResult{}, fmt.Errorf("read host load average: %w", err)
 	}
-	diskTotal, diskUsed, diskAvailable, err := readHostDisk()
+	diskTotal, diskUsed, diskAvailable, err := readHostDisk(d.resolveDockerDataPath(ctx))
 	if err != nil {
 		return HostSystemMetricsResult{}, fmt.Errorf("read host disk: %w", err)
 	}

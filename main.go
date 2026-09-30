@@ -43,6 +43,7 @@ func main() {
 		log.Fatalf("docker client: %v", err)
 	}
 	log.Print("docker client initialized")
+	docker.WarmHostResources()
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -178,7 +179,7 @@ func handleCommand(ctx context.Context, conn *websocket.Conn, writeMu *sync.Mute
 		sendResult(conn, writeMu, cmd.ID, stats, err)
 
 	case CmdHostResources:
-		resources, err := docker.HostResources(ctx)
+		resources, err := docker.CachedHostResources(ctx)
 		if err != nil {
 			log.Printf("host resources query failed: %v", err)
 		}

@@ -22,7 +22,8 @@ import (
 // backend's own SSH+CLI-text-parsing approach (see backend/internal/
 // services/docker_parse.go) for VMs that don't have this agent installed.
 type dockerClient struct {
-	cli *client.Client
+	cli       *client.Client
+	resources hostResourcesCache
 }
 
 func newDockerClient() (*dockerClient, error) {
