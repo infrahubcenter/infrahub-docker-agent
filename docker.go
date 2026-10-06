@@ -98,6 +98,12 @@ func (d *dockerClient) ListContainers(ctx context.Context) ([]ContainerInfo, err
 				if detail.State.StartedAt != "" && detail.State.StartedAt != "0001-01-01T00:00:00Z" {
 					info.StartedAt = detail.State.StartedAt
 				}
+				if !detail.State.Running && detail.State.FinishedAt != "" && detail.State.FinishedAt != "0001-01-01T00:00:00Z" {
+					code := detail.State.ExitCode
+					info.ExitCode = &code
+					info.FinishedAt = detail.State.FinishedAt
+					info.OOMKilled = detail.State.OOMKilled
+				}
 			}
 		} else {
 			log.Printf("docker discovery: inspect failed for container %s, using basic info: %v", shortID(c.ID), err)

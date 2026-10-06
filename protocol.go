@@ -64,6 +64,11 @@ type ContainerInfo struct {
 	RestartCount int    `json:"restart_count"`
 	CreatedAt    string `json:"created_at,omitempty"` // RFC3339
 	StartedAt    string `json:"started_at,omitempty"` // RFC3339
+	// Set once the container has stopped: its exit code, when it
+	// stopped, and whether the kernel OOM killer stopped it.
+	ExitCode   *int   `json:"exit_code,omitempty"`
+	FinishedAt string `json:"finished_at,omitempty"` // RFC3339
+	OOMKilled  bool   `json:"oom_killed,omitempty"`
 }
 
 // ContainerStatsResult is what "container_stats" returns -- one entry per
